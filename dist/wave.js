@@ -1,0 +1,180 @@
+const $ = selector => document.querySelector(selector);
+const view = $('#view');
+const audio = $('#audio');
+let items = [];
+let selected;
+let objectUrl;
+let noticeTimer;
+const database = new Promise((resolve, reject) => {
+  const request = indexedDB.open('wave-fresh-library', 1);
+  request.onupgradeneeded = () => request.result.createObjectStore('items', { keyPath: 'id' });
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+async function change(mode, operation) {
+  const db = await database;
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('items', mode);
+    const request = operation(transaction.objectStore('items'));
+    transaction.oncomplete = () => resolve(request.result);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+function notice(message) {
+  clearTimeout(noticeTimer);
+  $('#notice').textContent = message;
+  noticeTimer = setTimeout(() => { $('#notice').textContent = ''; }, 3500);
+}
+const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const row = item => `<article class="row"><div class="art">${item.file ? '♫' : '↗'}</div>
+  ${item.file ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">`}
+  <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${item.file ? '</button>' : '</a>'}
+  <button data-like="${item.id}" aria-label="Favorite ${escape(item.title)}" aria-pressed="${Boolean(item.liked)}">${item.liked ? '♥' : '♡'}</button>
+  <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}">×</button></article>`;
+const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
+function render() {
+  const page = location.hash.slice(1) || 'home';
+  for (const link of document.querySelectorAll('nav a')) {
+    if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  const favorites = items.filter(item => item.liked);
+  if (page === 'search') {
+    view.innerHTML = '<h1>Search</h1><label>Search your library<input id="query" type="search" placeholder="Track, playlist, or service"></label><div id="results"></div>';
+    const query = $('#query');
+    const filter = () => {
+      const term = query.value.trim().toLowerCase();
+      $('#results').innerHTML = list(items.filter(item => (item.title + ' ' + item.source).toLowerCase().includes(term)), 'No results.');
+    };
+    query.addEventListener('input', filter);
+    filter();
+  } else if (page === 'library' || page === 'liked') {
+    view.innerHTML = `<h1>${page === 'liked' ? 'Liked' : 'Your library'}</h1>${list(page === 'liked' ? favorites : items, page === 'liked' ? 'Your favorites will show up here.' : 'Add an audio file or save a music link to get started.')}`;
+  } else {
+    view.innerHTML = `<div class="hero"><span class="eyebrow">WAVE MUSIC</span><h1>Your music, together.</h1><p>Play your audio files and save music links from any service.</p><button class="accent" data-import>Import music</button></div>
+    <h2>Speed dial</h2><div class="tiles"><a class="tile" href="#library">▤ &nbsp; Library<small>${items.length} saved</small></a><a class="tile" href="#liked">♡ &nbsp; Liked<small>${favorites.length} saved</small></a><button class="tile" data-import>＋ &nbsp; Import<small>Files or links</small></button></div>
+    <h2>Recently added</h2>${list(items.slice(0, 6), 'Your library starts here.')}`;
+  }
+  updatePlayer();
+}
+function updatePlayer() {
+  const available = items.some(item => item.file);
+  for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
+  $('#seek').disabled = !Number.isFinite(audio.duration);
+  $('#playing').textContent = selected?.title || 'Nothing playing';
+  $('#playing-source').textContent = selected?.source || 'Your audio player';
+  $('#play').textContent = audio.paused ? '▶' : '❚❚';
+  $('#play').setAttribute('aria-label', audio.paused ? 'Play' : 'Pause');
+}
+const time = seconds => Number.isFinite(seconds) ? Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0') : '0:00';
+function updateTime() {
+  $('#elapsed').textContent = time(audio.currentTime);
+  $('#duration').textContent = time(audio.duration);
+  $('#seek').value = audio.duration ? audio.currentTime / audio.duration * 1000 : 0;
+  updatePlayer();
+}
+function choose(item) {
+  if (!item?.file) return;
+  audio.pause();
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  selected = item;
+  objectUrl = URL.createObjectURL(item.file);
+  audio.src = objectUrl;
+  audio.play().catch(() => notice('Could not play this audio file.'));
+  updateTime();
+}
+function step(direction) {
+  const tracks = items.filter(item => item.file);
+  if (!tracks.length) return;
+  const index = tracks.findIndex(item => item.id === selected?.id);
+  choose(tracks[index < 0 ? 0 : (index + direction + tracks.length) % tracks.length]);
+}
+$('#prev').onclick = () => step(-1);
+$('#next').onclick = () => step(1);
+$('#play').onclick = () => {
+  if (!selected) step(1);
+  else if (audio.paused) audio.play().catch(() => notice('Could not play this audio file.'));
+  else audio.pause();
+};
+$('#seek').oninput = event => { if (Number.isFinite(audio.duration)) audio.currentTime = audio.duration * event.target.value / 1000; };
+audio.volume = Number($('#volume').value);
+$('#volume').oninput = event => { audio.volume = Number(event.target.value); };
+for (const event of ['loadedmetadata', 'timeupdate', 'play', 'pause', 'emptied']) audio.addEventListener(event, updateTime);
+audio.onended = () => {
+  const tracks = items.filter(item => item.file);
+  const index = tracks.findIndex(item => item.id === selected?.id);
+  if (index >= 0 && index + 1 < tracks.length) choose(tracks[index + 1]);
+};
+const dialog = $('#imports');
+$('#import').onclick = () => dialog.showModal();
+$('#close').onclick = () => dialog.close();
+$('#pick').onclick = () => $('#files').click();
+async function add(item) {
+  await change('readwrite', table => table.put(item));
+  items.unshift(item);
+}
+$('#files').onchange = async event => {
+  const files = [...event.target.files];
+  event.target.value = '';
+  let added = 0;
+  try {
+    for (const file of files) {
+      if (!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|m4a|aac|opus)$/i.test(file.name)) continue;
+      await add({ id: crypto.randomUUID(), title: file.name, source: 'Local audio', file, added: Date.now() });
+      added++;
+    }
+    notice(added ? `Imported ${added} audio ${added === 1 ? 'file' : 'files'}.` : 'Choose a supported audio file.');
+  } catch { notice(`Saved ${added}. Browser storage could not accept the remaining files.`); }
+  if (added) { dialog.close(); location.hash = 'library'; render(); }
+};
+$('#link-form').onsubmit = async event => {
+  event.preventDefault();
+  const url = new URL($('#url').value);
+  if (url.protocol !== 'https:' || url.username || url.password) return notice('Use an HTTPS share link.');
+  if (items.some(item => item.url === url.href)) return notice('That link is already saved.');
+  try {
+    await add({ id: crypto.randomUUID(), title: $('#name').value.trim() || url.hostname, source: url.hostname, url: url.href, added: Date.now() });
+    event.target.reset();
+    dialog.close();
+    location.hash = 'library';
+    render();
+  } catch { notice('Could not save the link.'); }
+};
+view.onclick = async event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  if (button.hasAttribute('data-import')) return dialog.showModal();
+  const { track, like, remove } = button.dataset;
+  const item = items.find(entry => entry.id === (track || like || remove));
+  if (!item) return;
+  if (track) return choose(item);
+  button.disabled = true;
+  try {
+    if (like) {
+      const updated = { ...item, liked: !item.liked };
+      await change('readwrite', table => table.put(updated));
+      items = items.map(entry => entry.id === item.id ? updated : entry);
+    } else {
+      await change('readwrite', table => table.delete(item.id));
+      items = items.filter(entry => entry.id !== item.id);
+      if (selected?.id === item.id) {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = selected = undefined;
+      }
+    }
+    const query = $('#query')?.value;
+    render();
+    if (query !== undefined) {
+      $('#query').value = query;
+      $('#query').dispatchEvent(new Event('input'));
+    }
+  } catch { notice('Could not update this item.'); }
+  finally { button.disabled = false; }
+};
+window.addEventListener('hashchange', render);
+try { items = (await change('readonly', table => table.getAll())).sort((a, b) => b.added - a.added); }
+catch { notice('Could not open browser storage.'); }
+render();

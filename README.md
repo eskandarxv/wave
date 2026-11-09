@@ -1,7 +1,5 @@
 # Wave
 
-A free music player for your own audio files. Import files or a folder, search your library, save favorites, and make playlists. Your library is stored in this browser. Wave starts empty.
+A fresh Wave player. Import audio you have permission to play, save song and playlist links, and search or favorite your collection. Your library lives in this browser. The app starts empty.
 
-Open `index.html` through a local static web server, or host the files together on GitHub Pages. Use audio you have permission to play. This edition does not connect streaming accounts or sync libraries across devices.
-
-Source and original SVG artwork are licensed under MIT.
+Serve `dist` over HTTP for local development. For GitHub Pages, publish the contents of `dist` as the site root.
