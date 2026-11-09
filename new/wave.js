@@ -39,7 +39,9 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   const favorites = items.filter(item => item.liked);
-  if (page === 'search') {
+  if (page === 'queue') {
+    view.innerHTML = '<h1>Play queue</h1>' + list(items.filter(item => item.file), 'Import audio to build your queue.');
+  } else if (page === 'search') {
     view.innerHTML = '<h1>Search</h1><label>Search your library<input id="query" type="search" placeholder="Track, playlist, or service"></label><div id="results"></div>';
     const query = $('#query');
     const filter = () => {
@@ -178,3 +180,60 @@ window.addEventListener('hashchange', render);
 try { items = (await change('readonly', table => table.getAll())).sort((a, b) => b.added - a.added); }
 catch { notice('Could not open browser storage.'); }
 render();
+
+// Player preferences share the existing audio element.
+let shuffle = false;
+let repeat = 'off';
+const controls = document.createElement('div');
+controls.className = 'extra-controls';
+controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="theme">Dark glass</button>';
+document.querySelector('main').before(controls);
+let savedTheme = 'light';
+try { savedTheme = localStorage.getItem('wave-theme') || 'light'; } catch {}
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  $('#theme').textContent = theme === 'dark' ? 'Light glass' : 'Dark glass';
+  try { localStorage.setItem('wave-theme', theme); } catch {}
+}
+setTheme(savedTheme);
+$('#theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+$('#shuffle').onclick = () => {
+  shuffle = !shuffle;
+  $('#shuffle').setAttribute('aria-pressed', String(shuffle));
+  notice(shuffle ? 'Shuffle on' : 'Shuffle off');
+};
+$('#repeat').onclick = () => {
+  repeat = { off: 'queue', queue: 'song', song: 'off' }[repeat];
+  $('#repeat').textContent = 'Repeat ' + repeat;
+};
+const sequentialStep = step;
+step = function(direction) {
+  const tracks = items.filter(item => item.file && item.id !== selected?.id);
+  if (shuffle && direction > 0 && tracks.length) choose(tracks[Math.floor(Math.random() * tracks.length)]);
+  else sequentialStep(direction);
+};
+audio.onended = () => {
+  if (repeat === 'song') {
+    audio.currentTime = 0;
+    audio.play().catch(() => notice('Press play to continue.'));
+    return;
+  }
+  const tracks = items.filter(item => item.file);
+  const index = tracks.findIndex(item => item.id === selected?.id);
+  if (shuffle || repeat === 'queue' || index + 1 < tracks.length) step(1);
+};
+$('#queue').onclick = () => {
+  location.hash = 'queue';
+  renderQueue();
+};
+function renderQueue() {
+  view.innerHTML = '<h1>Play queue</h1>' + list(items.filter(item => item.file), 'Import audio to build your queue.');
+}
+window.addEventListener('hashchange', () => { if (location.hash === '#queue') renderQueue(); });
+document.addEventListener('keydown', event => {
+  if (event.target.closest('input, textarea, button, dialog, a')) return;
+  if (event.code === 'Space') { event.preventDefault(); $('#play').click(); }
+  if (event.key === 'ArrowRight' && Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+  if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
+});
+window.addEventListener('beforeunload', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });

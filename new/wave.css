@@ -13,3 +13,15 @@ dialog::backdrop{background:#26395542;backdrop-filter:blur(5px)}
 #notice{background:#f7fbff;border:1px solid #cadbf0;box-shadow:0 6px 24px #32497020}
 .tile,.row,button,nav a{transition:background .18s ease,box-shadow .18s ease}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+footer{inset:auto 14px 12px;border:1px solid #ffffffc0;border-radius:24px;height:88px;box-shadow:0 15px 45px #25467924}
+.extra-controls{position:fixed;right:24px;top:12px;display:flex;gap:6px;z-index:2;padding:5px;background:#ffffffb0;border:1px solid #fff;border-radius:14px;backdrop-filter:blur(22px)}
+main{padding-top:76px}
+.extra-controls button[aria-pressed=true]{background:#245eb0;color:#fff}
+html[data-theme=dark]{color-scheme:dark;--bg:#151924;--panel:#202737a0;--ink:#f1f5ff;--muted:#bac7dd;--accent:#92bbff;--line:#ffffff25}
+html[data-theme=dark] body{background:radial-gradient(ellipse at 70% 0%,#3a2d58,transparent 60%),#131a26}
+html[data-theme=dark] aside,html[data-theme=dark] footer,html[data-theme=dark] dialog,html[data-theme=dark] .tile,html[data-theme=dark] .row,html[data-theme=dark] .empty,html[data-theme=dark] .extra-controls{background:#1e293bc9;border-color:#ffffff24}
+html[data-theme=dark] .hero{background:linear-gradient(120deg,#293344bb,#3b2f55aa);border-color:#ffffff26}
+html[data-theme=dark] input:not([type=range]):not([type=file]){background:#111a2c;color:#fff}
+html[data-theme=dark] .art{background:#2b4161}
+html[data-theme=dark] #notice{background:#243249;color:#fff}
+@media(max-width:640px){footer{inset:auto 6px calc(6px + env(safe-area-inset-bottom));border-radius:18px}.extra-controls{right:8px;left:62px;justify-content:space-between}.extra-controls button{font-size:11px;padding:8px}main{padding-top:70px}}
