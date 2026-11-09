@@ -1,17 +1,7 @@
-# Wave — Blue Hour
+# Wave
 
-An open-source music player with a blue Spotify/Liner-inspired interface.
+A free music player for your own audio files. Import files or a folder, search your library, save favorites, and make playlists. Your library is stored in this browser. Wave starts empty.
 
-**GitHub Pages edition**: real playback, original CC0 demo tracks, drag-and-drop/file/folder imports, likes, playlists and an immersive player. Imported audio stays in the visitor's browser through IndexedDB. Each visitor has their own local library. No music files or account data are uploaded to this repository.
+Open `index.html` through a local static web server, or host the files together on GitHub Pages. Use audio you have permission to play. This edition does not connect streaming accounts or sync libraries across devices.
 
-## Deployment
-
-Enable GitHub Pages in Settings → Pages, deploy from main branch, root folder. No build or API keys required. Keep all files together.
-
-## Limits
-
-This static edition has no shared backend. Sign-in, cross-device libraries, community rankings and donations are not connected. The interface explains this and does not collect passwords or show made-up rankings. Audio format and folder picker support depend on the browser. Clearing site data removes local imports.
-
-## License
-
-Code and original SVG artwork: MIT (LICENSE). Eight original synthesized demo tracks: CC0 (CREDITS.md). Imported songs keep their existing rights. Fonts use Google Fonts with system fallbacks.
+Source and original SVG artwork are licensed under MIT.
