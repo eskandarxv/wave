@@ -33,6 +33,8 @@ async function change(mode, operation) {
 }
 function notice(message) {
   clearTimeout(noticeTimer);
+  $('#notice').textContent = '';
+  $('#import-status').textContent = '';
   const status = $('#imports').open ? $('#import-status') : $('#notice');
   status.textContent = message;
   noticeTimer = setTimeout(() => { status.textContent = ''; }, 4500);
@@ -237,7 +239,12 @@ audio.onended = () => {
   if (index >= 0 && index + 1 < tracks.length) choose(tracks[index + 1]);
 };
 const dialog = $('#imports');
-$('#import').onclick = () => dialog.showModal();
+function openImport() {
+  importModes[0].click();
+  $('#import-status').textContent = '';
+  dialog.showModal();
+}
+$('#import').onclick = openImport;
 $('#close').onclick = () => dialog.close();
 const importModes = [...dialog.querySelectorAll('[data-mode]')];
 for (const button of importModes) button.onclick = () => {
@@ -266,9 +273,10 @@ $('#files').onchange = async event => {
       await add({ id: crypto.randomUUID(), title: file.name, source: 'Local audio', file, added: Date.now() });
       added++;
     }
+    if (added) dialog.close();
     notice(added ? `Imported ${added} audio ${added === 1 ? 'file' : 'files'}.` : 'Choose a supported audio file.');
   } catch { notice(`Saved ${added}. Browser storage could not accept the remaining files.`); }
-  if (added) { dialog.close(); location.hash = 'library'; render(); }
+  if (added) { location.hash = 'library'; render(); }
 };
 $('#link-form').onsubmit = async event => {
   event.preventDefault();
@@ -286,7 +294,7 @@ $('#link-form').onsubmit = async event => {
 view.onclick = async event => {
   const button = event.target.closest('button');
   if (!button) return;
-  if (button.hasAttribute('data-import')) return dialog.showModal();
+  if (button.hasAttribute('data-import')) return openImport();
   const { track, remove, seek } = button.dataset;
   if (seek !== undefined && Number.isFinite(audio.duration)) {
     audio.currentTime = Math.min(Number(seek), audio.duration);

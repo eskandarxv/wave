@@ -256,3 +256,47 @@ html[data-theme=dark] .focus-player {background:radial-gradient(ellipse at 55% 2
  .focus-art{width:min(60vw,235px)}
  .home-heading{flex-wrap:wrap}
 }
+
+/* Keep the theme control clear of headings and page actions. */
+.theme-switch {position:absolute;top:12px;right:14px}
+main {padding-top:58px}
+.library-heading h1,.home-heading h1 {min-width:0;overflow-wrap:anywhere}
+.library-heading button {flex:none}
+#playlist-add select {max-width:100%}
+#imports p {line-height:1.5}
+
+.art-shelf .art,.mix-shelf .mix-art,.focus-art .cover-orbit {
+  position:relative;isolation:isolate;overflow:hidden;
+  border-radius:13px;
+  background:linear-gradient(150deg,#31343a,#101113 72%);
+  color:#fafafa;
+  box-shadow:inset 0 1px 0 #ffffff20,0 7px 16px #0003;
+}
+.art-shelf .art::before,.mix-shelf .mix-art::before,.focus-art .cover-orbit::before {
+  content:'';position:absolute;inset:-12%;z-index:-1;
+  background:radial-gradient(ellipse at 26% 28%,#e6e9eeaa,transparent 39%),
+    radial-gradient(ellipse at 72% 69%,#7c879aaa,transparent 48%),
+    radial-gradient(ellipse at 92% 15%,#fafaf552,transparent 38%);
+  filter:blur(15px) grayscale(1);transform:rotate(-13deg);
+}
+.art-shelf .row:nth-child(3n+2) .art::before,.mix-shelf .mix-card:nth-child(3n+2) .mix-art::before {
+  transform:rotate(102deg) scale(1.18);
+}
+.art-shelf .row:nth-child(3n) .art::before,.mix-shelf .mix-card:nth-child(3n) .mix-art::before {
+  transform:rotate(195deg);
+}
+.mix-shelf .mix-art span {background:#18181880;border:1px solid #fff3;backdrop-filter:blur(10px)}
+.mix-card,.art-shelf .art {transition:transform .2s ease,box-shadow .2s ease}
+@media(hover:hover) {
+ .mix-card:hover,.art-shelf .row:hover .art {transform:translateY(-3px);box-shadow:0 9px 24px #0005}
+}
+@media(max-width:640px) {
+ main {padding-top:54px}
+ .library-heading {flex-wrap:wrap}
+ .section-head {align-items:center}
+ .art-shelf .row {min-width:0}
+}
+@media(prefers-reduced-motion:reduce) {
+ .mix-card,.art-shelf .art {transition:none}
+ .mix-card:hover,.art-shelf .row:hover .art {transform:none}
+}
