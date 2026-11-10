@@ -120,9 +120,9 @@ function render() {
     draw();
   } else {
     view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics" data-playing-only hidden>Now playing</a></div>
-    <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="cover-orbit" aria-hidden="true">≋</div></section>
+    <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="studio-drawing" aria-hidden="true"></div></section>
     ${playlists.length ? `<div class="section-head"><h2>Your playlists</h2><a href="#playlists">View all ↗</a></div>
-    <div class="mix-shelf">${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art">♫</div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>` : ''}
+    <div class="mix-shelf">${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art" aria-hidden="true"><span>♫</span></div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>` : ''}
     <h2>Recently added</h2>${list(items.slice(0, 6), 'Import audio or save a link to get started.')}`;
   }
   updatePlayer();
@@ -175,6 +175,8 @@ function highlightLyrics() {
 }
 audio.addEventListener('timeupdate', highlightLyrics);
 function updatePlayer() {
+  $('footer').hidden = !selected;
+  document.body.classList.toggle('has-track', Boolean(selected));
   const available = Boolean(selected) || queueTracks().length > 0;
   for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
   $('#seek').disabled = !Number.isFinite(audio.duration);
@@ -328,13 +330,13 @@ let shuffle = false;
 let repeat = 'off';
 const controls = document.createElement('div');
 controls.className = 'extra-controls';
-controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="lyrics" hidden>Lyrics</button><button id="theme">Dark glass</button>';
+controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="lyrics" hidden>Lyrics</button>';
 $('footer').append(controls);
 let savedTheme = 'dark';
 try { savedTheme = localStorage.getItem('wave-blue-theme') || 'dark'; } catch {}
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  $('#theme').textContent = theme === 'dark' ? 'Light glass' : 'Dark glass';
+  $('#theme').textContent = theme === 'dark' ? 'Light theme' : 'Dark theme';
   try { localStorage.setItem('wave-blue-theme', theme); } catch {}
 }
 setTheme(savedTheme);

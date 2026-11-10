@@ -186,3 +186,19 @@ dialog input[type=file] {max-width:100%;font-size:14px}
   #notice {bottom:calc(172px + env(safe-area-inset-bottom))}
   dialog input:not([type=range]):not([type=file]), input[type=search] {font-size:16px}
 }
+
+body:not(.has-track) main {padding-bottom:60px}
+body:not(.has-track) aside {height:calc(100dvh - 12px)}
+.theme-switch {position:fixed;top:12px;right:14px;z-index:2;border:1px solid var(--line);font-size:12px;background:var(--panel)}
+.studio-hero {grid-template-columns:minmax(0,1fr) minmax(0,1fr);position:relative;isolation:isolate;overflow:hidden;min-height:260px}
+.studio-drawing {align-self:stretch;min-height:160px;background:url('./studio.svg?v=ink9') center / contain no-repeat}
+.mix-art {position:relative;isolation:isolate;overflow:hidden}
+.mix-art::before {content:'';position:absolute;inset:0;z-index:-1;background:url('./studio.svg?v=ink9') center / cover no-repeat;opacity:.8}
+.mix-card:nth-child(even) .mix-art::before {transform:scaleX(-1);filter:hue-rotate(22deg)}
+.mix-art span {background:#08152cbb;padding:6px 14px;border-radius:14px}
+@media(max-width:640px) {
+  body:not(.has-track) aside {height:auto}
+  body:not(.has-track) main {padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+  .studio-hero {grid-template-columns:1fr;min-height:0;gap:10px}
+  .studio-drawing {min-height:110px;background-position:center right}
+}

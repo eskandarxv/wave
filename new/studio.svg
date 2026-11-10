@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" fill="none">
+  <defs>
+    <radialGradient id="halo"><stop stop-color="#4389ff" stop-opacity=".48"/><stop offset="1" stop-color="#4389ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="wave" x1="30" y1="260" x2="470" y2="120" gradientUnits="userSpaceOnUse"><stop stop-color="#254da1"/><stop offset=".55" stop-color="#5e9bff"/><stop offset="1" stop-color="#b0e2ff"/></linearGradient>
+    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#81a9ec" opacity=".32"/></pattern>
+  </defs>
+  <path fill="url(#dots)" d="M0 0h540v340H0z"/>
+  <ellipse cx="330" cy="160" rx="200" ry="155" fill="url(#halo)"/>
+  <g stroke="#739ce8">
+    <circle cx="337" cy="146" r="99" opacity=".35"/><circle cx="337" cy="146" r="76" opacity=".33"/><circle cx="337" cy="146" r="48" opacity=".4"/>
+    <path d="M337 29v233M218 146h238" opacity=".23"/>
+    <path d="M114 259h342M114 273h342M114 287h342" opacity=".18"/>
+  </g>
+  <g stroke="url(#wave)" stroke-linecap="round">
+    <path d="M37 241c71 3 94-105 164-88 44 11 55 75 101 67 53-9 69-138 121-131 42 5 51 68 92 60" stroke-width="3"/>
+    <path d="M37 250c78-5 101-73 163-64 49 7 69 63 114 50 58-17 64-112 109-108 40 4 52 50 92 44" opacity=".58"/>
+    <path d="M37 258c77-8 119-52 169-46 47 6 65 40 111 36 56-5 67-93 107-85 35 7 51 31 91 24" opacity=".35"/>
+  </g>
+  <g fill="#add8ff"><circle cx="201" cy="153" r="5"/><circle cx="423" cy="89" r="5"/><circle cx="337" cy="146" r="6"/><path d="M477 43v16m-8-8h16" stroke="#add8ff" stroke-width="2"/></g>
+</svg>
