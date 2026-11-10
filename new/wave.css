@@ -300,3 +300,11 @@ main {padding-top:58px}
  .mix-card,.art-shelf .art {transition:none}
  .mix-card:hover,.art-shelf .row:hover .art {transform:none}
 }
+aside nav #import {margin:0 auto}
+@media(max-width:640px) {
+  aside nav {grid-template-columns:repeat(5,minmax(0,1fr))}
+  aside nav .desktop-library {display:none}
+  aside nav #import {grid-column:3;grid-row:1;min-width:0;width:100%;max-width:64px}
+  aside nav a[href="#playlists"] {grid-column:4;grid-row:1}
+  aside nav a[href="#settings"] {grid-column:5;grid-row:1}
+}

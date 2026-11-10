@@ -53,7 +53,10 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   view.classList.toggle('focus-player', page === 'lyrics');
-  if (page === 'playlists') {
+  if (page === 'settings') {
+    view.innerHTML = '<h1>Settings</h1><div class="tiles"><a class="tile" href="#library">Library<small>Browse audio and saved links</small></a><button class="tile" id="settings-theme">Switch theme</button></div>';
+    $('#settings-theme').onclick = () => $('#theme').click();
+  } else if (page === 'playlists') {
     view.innerHTML = `<h1>Playlists</h1><form id="new-playlist"><label>Name<input name="name" required maxlength="80"></label><button class="accent">Create playlist</button></form>
     <div class="tiles">${playlists.map(playlist => `<a class="tile" href="#playlist-${playlist.id}">${escape(playlist.name)}<small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>`;
     $('#new-playlist').onsubmit = event => {
@@ -262,17 +265,15 @@ $('#files').onchange = async event => {
   const files = [...event.target.files];
   event.target.value = '';
   const playlistFiles = files.filter(file => /\.m3u8?$/i.test(file.name));
-  if (playlistFiles.length) {
-    if (files.length !== 1) return notice('Choose one playlist at a time, or select audio files together.');
-    return importPlaylist(playlistFiles[0]);
-  }
+  if (playlistFiles.length > 1) return notice('Choose one playlist at a time.');
   let added = 0;
   try {
-    for (const file of files) {
+    for (const file of files.filter(file => !playlistFiles.includes(file))) {
       if (!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|m4a|aac|opus)$/i.test(file.name)) continue;
       await add({ id: crypto.randomUUID(), title: file.name, source: 'Local audio', file, added: Date.now() });
       added++;
     }
+    if (playlistFiles.length) return await importPlaylist(playlistFiles[0]);
     if (added) dialog.close();
     notice(added ? `Imported ${added} audio ${added === 1 ? 'file' : 'files'}.` : 'Choose a supported audio file.');
   } catch { notice(`Saved ${added}. Browser storage could not accept the remaining files.`); }
@@ -425,12 +426,17 @@ async function importPlaylist(file) {
             /\.(mp3|m4a|aac|wav|flac|ogg|opus|webm)$/i.test(url.pathname)) {
           tracks.set(url.href, {audioUrl: url.href, title: title.slice(0, 160) || url.pathname.split('/').pop(), source: url.hostname});
         } else skipped++;
-      } catch { skipped++; }
+      } catch {
+        const basename = entry.split(/[\\/]/).pop();
+        const matches = items.filter(item => item.file?.name === basename);
+        if (matches.length === 1) tracks.set(matches[0].id, matches[0]);
+        else skipped++;
+      }
       title = '';
     }
-    if (!tracks.size) return notice('This file has no supported direct HTTPS audio links.');
+    if (!tracks.size) return notice('No tracks matched. Select the matching audio files with the playlist, or use direct HTTPS audio links.');
     if (tracks.size > 500) return notice('Choose a playlist with 500 tracks or fewer.');
-    const entries = [...tracks.values()].map(track => items.find(item => item.audioUrl === track.audioUrl) ||
+    const entries = [...tracks.values()].map(track => (track.id ? track : items.find(item => item.audioUrl === track.audioUrl)) ||
       {...track, id: crypto.randomUUID(), added: Date.now()});
     const additions = entries.filter(item => !items.includes(item));
     await change('readwrite', table => {
@@ -442,6 +448,6 @@ async function importPlaylist(file) {
     if (!savePlaylists([...playlists, playlist])) return;
     dialog.close();
     location.hash = 'playlist-' + playlist.id;
-    notice(`Imported ${entries.length} audio links.${skipped ? ` Skipped ${skipped} unsupported entries.` : ''}`);
+    notice(`Imported ${entries.length} playlist tracks.${skipped ? ` Skipped ${skipped} unsupported entries.` : ''}`);
   } catch { notice('Could not import this playlist.'); }
 }
