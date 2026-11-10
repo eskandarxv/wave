@@ -120,10 +120,11 @@ function render() {
     draw();
   } else {
     view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics" data-playing-only hidden>Now playing</a></div>
-    <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="studio-drawing" aria-hidden="true"></div></section>
+    <header class="home-heading"><h1>Your collection</h1><button class="accent" data-import>＋ Import music</button></header>
+    ${items.length ? `<section class="quick-shelf" aria-label="Recently imported">${items.slice(0, 6).map(row).join('')}</section>` : '<div class="empty">Import audio or save a link to start your collection.</div>'}
     ${playlists.length ? `<div class="section-head"><h2>Your playlists</h2><a href="#playlists">View all ↗</a></div>
     <div class="mix-shelf">${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art" aria-hidden="true"><span>♫</span></div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>` : ''}
-    <h2>Recently added</h2>${list(items.slice(0, 6), 'Import audio or save a link to get started.')}`;
+    ${items.length ? `<div class="section-head"><h2>Recently added</h2><a href="#library">Library ↗</a></div><div class="shelf art-shelf">${items.slice(0, 12).map(row).join('')}</div>` : ''}`;
   }
   updatePlayer();
 }
@@ -238,6 +239,13 @@ audio.onended = () => {
 const dialog = $('#imports');
 $('#import').onclick = () => dialog.showModal();
 $('#close').onclick = () => dialog.close();
+const importModes = [...dialog.querySelectorAll('[data-mode]')];
+for (const button of importModes) button.onclick = () => {
+  const linkMode = button.dataset.mode === 'link';
+  $('#link-form').hidden = !linkMode;
+  $('#import-files').hidden = linkMode;
+  for (const mode of importModes) mode.setAttribute('aria-pressed', String(mode === button));
+};
 $('#pick').onclick = () => $('#files').click();
 async function add(item) {
   await change('readwrite', table => table.put(item));

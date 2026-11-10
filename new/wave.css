@@ -225,3 +225,34 @@ html[data-theme=dark] .focus-player {background:radial-gradient(at 34% 40%,#3339
 #pick {display:block;width:100%;min-height:44px}
 #imports details {border-top:1px solid var(--line);padding-top:14px}
 #imports summary {cursor:pointer;color:var(--muted)}
+
+.home-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+.home-heading h1 {font-size:clamp(22px,4vw,32px);margin:0}
+.home-heading button {flex:none}
+.quick-shelf {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:28px}
+.quick-shelf .row {margin:0;padding:4px;min-width:0}
+.quick-shelf .row .item {padding:4px 6px}
+.quick-shelf .row strong,.quick-shelf .row small {display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick-shelf [data-remove] {padding:6px}
+.art-shelf,.mix-shelf {display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:14px;margin-bottom:24px}
+.art-shelf .row {background:transparent!important;border:0;padding:0}
+.art-shelf .art,.mix-shelf .mix-art {border-radius:8px;background:#202020 url('./studio.svg') center/cover;filter:grayscale(1)}
+.art-shelf .row:nth-child(even) .art {background-position:70% center}
+.art-shelf .row strong {font-size:13px}
+.focus-player {min-height:calc(100dvh - 40px)}
+html[data-theme=dark] .focus-player {background:radial-gradient(ellipse at 55% 20%,#3f3f3f,transparent 72%),linear-gradient(#242424,#080808)}
+.focus-grid {max-width:1080px;margin:auto;grid-template-columns:minmax(180px,.9fr) minmax(0,1.1fr)}
+.focus-art {width:min(100%,330px);justify-self:center}
+.focus-art .cover-orbit {background:#252525 url('./studio.svg') center/cover}
+#lyrics-lines button {background:transparent;padding:12px 0;font-weight:650}
+#lyrics-lines button[aria-current] {background:transparent;color:var(--ink)}
+.import-modes {display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:10px;margin-bottom:16px}
+.import-modes button[aria-pressed=true] {background:var(--ink);color:var(--bg)}
+@media(max-width:780px){.quick-shelf{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){
+ .quick-shelf{grid-template-columns:1fr}
+ .art-shelf,.mix-shelf{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .focus-grid{grid-template-columns:1fr}
+ .focus-art{width:min(60vw,235px)}
+ .home-heading{flex-wrap:wrap}
+}
