@@ -38,7 +38,8 @@ const row = item => `<article class="row"><div class="art">${playable(item) ? '�
   <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}${location.hash.startsWith('#playlist-') ? ' from playlist' : ''}">×</button></article>`;
 const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
 function render() {
-  const page = location.hash.slice(1) || 'home';
+  const requestedPage = location.hash.slice(1) || 'home';
+  const page = requestedPage === 'lyrics' && (audio.paused || audio.ended) ? 'library' : requestedPage;
   for (const link of document.querySelectorAll('nav a')) {
     if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -60,11 +61,15 @@ function render() {
     const entries = playlist.ids.map(id => items.find(item => item.id === id)).filter(Boolean);
     view.innerHTML = `<a href="#playlists">‹ Playlists</a><h1>${escape(playlist.name)}</h1>
     <form id="playlist-add"><label>Add music<select name="track" required><option value="">Choose from library</option>${items.filter(item => !playlist.ids.includes(item.id)).map(item => `<option value="${item.id}">${escape(item.title)}</option>`).join('')}</select></label><button class="accent">Add item</button></form>
-    <button id="playlist-delete">Delete playlist</button><section>${list(entries, 'Add items from your library.')}</section>`;
+    <button class="accent" id="playlist-play" ${entries.some(playable) ? '' : 'disabled'}>▶ Play playlist</button> <button id="playlist-delete">Delete playlist</button><section>${list(entries, 'Add items from your library.')}</section>`;
     $('#playlist-add').onsubmit = event => {
       event.preventDefault();
       const id = event.target.elements.track.value;
       if (savePlaylists(playlists.map(entry => entry === playlist ? {...entry, ids: [...entry.ids, id]} : entry))) render();
+    };
+    $('#playlist-play').onclick = () => {
+      playlistQueue = playlist.ids;
+      choose(queueTracks()[0]);
     };
     $('#playlist-delete').onclick = () => {
       if (confirm('Delete this playlist?') && savePlaylists(playlists.filter(entry => entry !== playlist))) location.hash = 'playlists';
@@ -108,7 +113,7 @@ function render() {
     };
     draw();
   } else {
-    view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics">Now playing</a></div>
+    view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics" data-playing-only hidden>Now playing</a></div>
     <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="cover-orbit" aria-hidden="true">≋</div></section>
     ${playlists.length ? `<div class="section-head"><h2>Your playlists</h2><a href="#playlists">View all ↗</a></div>
     <div class="mix-shelf">${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art">♫</div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>` : ''}
@@ -169,6 +174,7 @@ function updatePlayer() {
   $('#seek').disabled = !Number.isFinite(audio.duration);
   $('#playing').textContent = selected?.title || 'Nothing playing';
   $('#playing-source').textContent = selected?.source || 'Your audio player';
+  for (const control of document.querySelectorAll('#lyrics, [data-playing-only]')) control.hidden = audio.paused || audio.ended;
   $('#play').textContent = audio.paused ? '▶' : '❚❚';
   $('#play').setAttribute('aria-label', audio.paused ? 'Play' : 'Pause');
 }
@@ -305,14 +311,14 @@ let shuffle = false;
 let repeat = 'off';
 const controls = document.createElement('div');
 controls.className = 'extra-controls';
-controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="lyrics">Lyrics</button><button id="theme">Dark glass</button>';
+controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="lyrics" hidden>Lyrics</button><button id="theme">Dark glass</button>';
 $('footer').append(controls);
 let savedTheme = 'dark';
-try { savedTheme = localStorage.getItem('wave-theme') || 'dark'; } catch {}
+try { savedTheme = localStorage.getItem('wave-blue-theme') || 'dark'; } catch {}
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   $('#theme').textContent = theme === 'dark' ? 'Light glass' : 'Dark glass';
-  try { localStorage.setItem('wave-theme', theme); } catch {}
+  try { localStorage.setItem('wave-blue-theme', theme); } catch {}
 }
 setTheme(savedTheme);
 $('#theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
@@ -357,7 +363,13 @@ document.addEventListener('keydown', event => {
 });
 window.addEventListener('beforeunload', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });
 
-$('#lyrics').onclick = () => { location.hash = 'lyrics'; };
+$('#lyrics').onclick = () => { if (!audio.paused && !audio.ended) location.hash = 'lyrics'; };
+for (const event of ['pause', 'ended', 'error']) audio.addEventListener(event, () => {
+  if (location.hash === '#lyrics' && (audio.paused || audio.ended || audio.error)) location.hash = 'library';
+});
+audio.addEventListener('error', () => {
+  if (selected?.audioUrl) notice('The audio host did not provide a playable track. Check the link or import the audio file.');
+});
 
 $('#playlist-file').onchange = async event => {
   const file = event.target.files[0];
@@ -369,6 +381,7 @@ $('#playlist-file').onchange = async event => {
     const lines = (await file.text()).split(/\r?\n/);
     if (lines.some(line => /^#EXT-X-/i.test(line.trim()))) return notice('Choose an M3U track list, rather than an HLS stream.');
     const tracks = new Map();
+    let skipped = 0;
     let title = '';
     for (const line of lines) {
       const entry = line.trim();
@@ -382,8 +395,8 @@ $('#playlist-file').onchange = async event => {
         if (url.protocol === 'https:' && !url.username && !url.password &&
             /\.(mp3|m4a|aac|wav|flac|ogg|opus|webm)$/i.test(url.pathname)) {
           tracks.set(url.href, {audioUrl: url.href, title: title.slice(0, 160) || url.pathname.split('/').pop(), source: url.hostname});
-        }
-      } catch {}
+        } else skipped++;
+      } catch { skipped++; }
       title = '';
     }
     if (!tracks.size) return notice('This file has no supported direct HTTPS audio links.');
@@ -400,6 +413,6 @@ $('#playlist-file').onchange = async event => {
     if (!savePlaylists([...playlists, playlist])) return;
     dialog.close();
     location.hash = 'playlist-' + playlist.id;
-    notice(`Imported ${entries.length} playable links.`);
+    notice(`Imported ${entries.length} audio links.${skipped ? ` Skipped ${skipped} unsupported entries.` : ''}`);
   } catch { notice('Could not import this playlist.'); }
 };

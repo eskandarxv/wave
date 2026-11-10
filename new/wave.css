@@ -149,3 +149,12 @@ html[data-theme=dark] .focus-player {background:radial-gradient(at 34% 40%,#1237
 .playlist-import {border-top:1px solid var(--line);margin-top:16px;padding-top:16px}
 dialog {max-height:calc(100dvh - 28px);overflow:auto}
 .extra-controls {min-width:0}
+
+[hidden] {display:none!important}
+html[data-theme=dark] {background:#000}
+html[data-theme=dark] aside, html[data-theme=dark] footer {border-color:#203459}
+html[data-theme=dark] nav a[aria-current] {background:#152a50;color:#9ec5ff}
+html[data-theme=dark] .mix-card:hover, html[data-theme=dark] .row:hover {background:#121c2e}
+html[data-theme=dark] .studio-hero {background:linear-gradient(112deg,#07090f 20%,#102754 100%);border-color:#274471}
+html[data-theme=dark] .extra-controls button[aria-pressed=true] {background:#244c90;color:white}
+html[data-theme=dark] #notice {background:#101b32;border-color:#355181}
