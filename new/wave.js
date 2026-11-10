@@ -246,6 +246,11 @@ async function add(item) {
 $('#files').onchange = async event => {
   const files = [...event.target.files];
   event.target.value = '';
+  const playlistFiles = files.filter(file => /\.m3u8?$/i.test(file.name));
+  if (playlistFiles.length) {
+    if (files.length !== 1) return notice('Choose one playlist at a time, or select audio files together.');
+    return importPlaylist(playlistFiles[0]);
+  }
   let added = 0;
   try {
     for (const file of files) {
@@ -383,11 +388,7 @@ audio.addEventListener('error', () => {
   if (selected?.audioUrl) notice('The audio host did not provide a playable track. Check the link or import the audio file.');
 });
 
-$('#playlist-file').onchange = async event => {
-  const file = event.target.files[0];
-  event.target.value = '';
-  if (!file) return;
-  if (!$('#playlist-rights').checked) return notice('Confirm permission to play the audio first.');
+async function importPlaylist(file) {
   if (file.size > 1024 * 1024) return notice('Choose a playlist under 1 MB.');
   try {
     const lines = (await file.text()).split(/\r?\n/);
@@ -427,4 +428,4 @@ $('#playlist-file').onchange = async event => {
     location.hash = 'playlist-' + playlist.id;
     notice(`Imported ${entries.length} audio links.${skipped ? ` Skipped ${skipped} unsupported entries.` : ''}`);
   } catch { notice('Could not import this playlist.'); }
-};
+}
