@@ -158,3 +158,31 @@ html[data-theme=dark] .mix-card:hover, html[data-theme=dark] .row:hover {backgro
 html[data-theme=dark] .studio-hero {background:linear-gradient(112deg,#07090f 20%,#102754 100%);border-color:#274471}
 html[data-theme=dark] .extra-controls button[aria-pressed=true] {background:#244c90;color:white}
 html[data-theme=dark] #notice {background:#101b32;border-color:#355181}
+
+#import-status:empty {display:none}
+#import-status {color:var(--accent);overflow-wrap:anywhere}
+dialog {max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+dialog input[type=file] {max-width:100%;font-size:14px}
+@media(max-width:640px) {
+  body {display:block}
+  main {padding:18px 14px calc(190px + env(safe-area-inset-bottom))}
+  aside {
+    position:fixed; inset:auto 0 0; z-index:4; height:auto; margin:0;
+    padding:4px 6px calc(4px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:row; gap:4px; border-radius:0;
+  }
+  aside .logo, aside > small {display:none}
+  aside nav {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex:1;gap:2px}
+  aside nav a, aside #import {min-height:48px;padding:3px;display:grid;place-content:center;line-height:1.1;font-size:19px;text-align:center;margin:0}
+  aside #import {min-width:50px}
+  aside nav span, aside #import span {display:block;position:static;clip-path:none;width:auto;height:auto;font-size:9px;margin-top:4px}
+  footer {z-index:3;inset:auto 6px calc(62px + env(safe-area-inset-bottom));padding:7px 8px;gap:4px}
+  .transport button {width:38px;min-height:38px;margin:0;padding:2px}
+  .extra-controls {gap:2px;justify-content:space-evenly}
+  .extra-controls button {min-height:35px;padding:4px 6px}
+  .library-tools {align-items:end}
+  .library-tools label {min-width:0}
+  .library-tools button {flex-shrink:0}
+  #notice {bottom:calc(172px + env(safe-area-inset-bottom))}
+  dialog input:not([type=range]):not([type=file]), input[type=search] {font-size:16px}
+}

@@ -3,9 +3,14 @@ const view = $('#view');
 const audio = $('#audio');
 let items = [];
 let selected;
-let playlistQueue;
+let queuePlaylistId;
+let playRequest = 0;
+let switchingTrack = false;
 const playable = item => Boolean(item?.file || item?.audioUrl);
-const queueTracks = () => (playlistQueue ? playlistQueue.map(id => items.find(item => item.id === id)) : items).filter(playable);
+function queueTracks() {
+  const playlist = playlists.find(entry => entry.id === queuePlaylistId);
+  return (playlist ? playlist.ids.map(id => items.find(item => item.id === id)) : items).filter(playable);
+}
 let objectUrl;
 let noticeTimer;
 let playlists = [];
@@ -28,8 +33,9 @@ async function change(mode, operation) {
 }
 function notice(message) {
   clearTimeout(noticeTimer);
-  $('#notice').textContent = message;
-  noticeTimer = setTimeout(() => { $('#notice').textContent = ''; }, 3500);
+  const status = $('#imports').open ? $('#import-status') : $('#notice');
+  status.textContent = message;
+  noticeTimer = setTimeout(() => { status.textContent = ''; }, 4500);
 }
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const row = item => `<article class="row"><div class="art">${playable(item) ? '♫' : '↗'}</div>
@@ -68,7 +74,7 @@ function render() {
       if (savePlaylists(playlists.map(entry => entry === playlist ? {...entry, ids: [...entry.ids, id]} : entry))) render();
     };
     $('#playlist-play').onclick = () => {
-      playlistQueue = playlist.ids;
+      queuePlaylistId = playlist.id;
       choose(queueTracks()[0]);
     };
     $('#playlist-delete').onclick = () => {
@@ -169,7 +175,7 @@ function highlightLyrics() {
 }
 audio.addEventListener('timeupdate', highlightLyrics);
 function updatePlayer() {
-  const available = items.some(playable);
+  const available = Boolean(selected) || queueTracks().length > 0;
   for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
   $('#seek').disabled = !Number.isFinite(audio.duration);
   $('#playing').textContent = selected?.title || 'Nothing playing';
@@ -182,17 +188,26 @@ const time = seconds => Number.isFinite(seconds) ? Math.floor(seconds / 60) + ':
 function updateTime() {
   $('#elapsed').textContent = time(audio.currentTime);
   $('#duration').textContent = time(audio.duration);
-  $('#seek').value = audio.duration ? audio.currentTime / audio.duration * 1000 : 0;
+  $('#seek').value = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.currentTime / audio.duration * 1000 : 0;
   updatePlayer();
 }
 function choose(item) {
   if (!playable(item)) return;
-  audio.pause();
+  const request = ++playRequest;
+  switchingTrack = true;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   selected = item;
   objectUrl = item.file ? URL.createObjectURL(item.file) : undefined;
   audio.src = objectUrl || item.audioUrl;
-  audio.play().catch(() => notice('Could not play this audio file.'));
+  audio.play().catch(() => {
+    if (request !== playRequest) return;
+    notice('Could not play this track. Check that the source is available.');
+    if (location.hash === '#lyrics') location.hash = 'library';
+  }).finally(() => {
+    if (request !== playRequest) return;
+    switchingTrack = false;
+    updateTime();
+  });
   renderLyrics();
   updateTime();
 }
@@ -271,7 +286,7 @@ view.onclick = async event => {
   if (!item) return;
   if (track) {
     const id = location.hash.startsWith('#playlist-') ? location.hash.slice(10) : null;
-    if (location.hash !== '#queue') playlistQueue = playlists.find(playlist => playlist.id === id)?.ids;
+    if (location.hash !== '#queue') queuePlaylistId = id;
     return choose(item);
   }
   button.disabled = true;
@@ -279,10 +294,12 @@ view.onclick = async event => {
       await change('readwrite', table => table.delete(item.id));
       items = items.filter(entry => entry.id !== item.id);
       if (selected?.id === item.id) {
+        playRequest++;
+        switchingTrack = false;
         audio.pause();
         audio.removeAttribute('src');
         audio.load();
-        URL.revokeObjectURL(objectUrl);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         objectUrl = selected = undefined;
       }
     const query = $('#query')?.value;
@@ -347,16 +364,9 @@ audio.onended = () => {
   const index = tracks.findIndex(item => item.id === selected?.id);
   if (shuffle || repeat === 'queue' || index + 1 < tracks.length) step(1);
 };
-$('#queue').onclick = () => {
-  location.hash = 'queue';
-  renderQueue();
-};
-function renderQueue() {
-  view.innerHTML = '<h1>Play queue</h1>' + list(queueTracks(), 'Import audio to build your queue.');
-}
-window.addEventListener('hashchange', () => { if (location.hash === '#queue') renderQueue(); });
+$('#queue').onclick = () => { location.hash = 'queue'; };
 document.addEventListener('keydown', event => {
-  if (event.target.closest('input, textarea, button, dialog, a')) return;
+  if ($('#imports').open || event.target.closest?.('input, textarea, button, dialog, a, select')) return;
   if (event.code === 'Space') { event.preventDefault(); $('#play').click(); }
   if (event.key === 'ArrowRight' && Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
   if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
@@ -365,7 +375,7 @@ window.addEventListener('beforeunload', () => { if (objectUrl) URL.revokeObjectU
 
 $('#lyrics').onclick = () => { if (!audio.paused && !audio.ended) location.hash = 'lyrics'; };
 for (const event of ['pause', 'ended', 'error']) audio.addEventListener(event, () => {
-  if (location.hash === '#lyrics' && (audio.paused || audio.ended || audio.error)) location.hash = 'library';
+  if (location.hash === '#lyrics' && !switchingTrack && (audio.paused || audio.ended || audio.error)) location.hash = 'library';
 });
 audio.addEventListener('error', () => {
   if (selected?.audioUrl) notice('The audio host did not provide a playable track. Check the link or import the audio file.');
