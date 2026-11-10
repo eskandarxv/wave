@@ -132,3 +132,20 @@ html[data-theme=dark] .accent, html[data-theme=dark] #play {
   .focus-art {width:min(52vw,220px);margin-inline:auto}
   .mix-shelf {grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+html[data-theme=dark] {
+  --bg:#000; --panel:#111111; --ink:#f5f7ff; --muted:#adb7cb;
+  --accent:#7eb1ff; --line:#ffffff24;
+}
+html[data-theme=dark] body {background:#000}
+html[data-theme=dark] aside, html[data-theme=dark] footer, html[data-theme=dark] dialog {background:#101115}
+html[data-theme=dark] .accent, html[data-theme=dark] #play {background:#79adff;color:#081327}
+html[data-theme=dark] .studio-hero {background:linear-gradient(120deg,#111116,#112856)}
+html[data-theme=dark] .cover-orbit, html[data-theme=dark] .mix-art {
+  background:radial-gradient(at 72% 22%,#487ddd,transparent 55%),linear-gradient(145deg,#070d1b,#1a3265);
+}
+html[data-theme=dark] .focus-player {background:radial-gradient(at 34% 40%,#12377760,transparent 65%)}
+.shelf .row {grid-template-columns:minmax(0,1fr) auto}
+.playlist-import {border-top:1px solid var(--line);margin-top:16px;padding-top:16px}
+dialog {max-height:calc(100dvh - 28px);overflow:auto}
+.extra-controls {min-width:0}

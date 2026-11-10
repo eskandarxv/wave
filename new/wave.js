@@ -3,6 +3,9 @@ const view = $('#view');
 const audio = $('#audio');
 let items = [];
 let selected;
+let playlistQueue;
+const playable = item => Boolean(item?.file || item?.audioUrl);
+const queueTracks = () => (playlistQueue ? playlistQueue.map(id => items.find(item => item.id === id)) : items).filter(playable);
 let objectUrl;
 let noticeTimer;
 let playlists = [];
@@ -29,10 +32,9 @@ function notice(message) {
   noticeTimer = setTimeout(() => { $('#notice').textContent = ''; }, 3500);
 }
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const row = item => `<article class="row"><div class="art">${item.file ? '♫' : '↗'}</div>
-  ${item.file ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">`}
-  <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${item.file ? '</button>' : '</a>'}
-  <button data-like="${item.id}" aria-label="Favorite ${escape(item.title)}" aria-pressed="${Boolean(item.liked)}">${item.liked ? '♥' : '♡'}</button>
+const row = item => `<article class="row"><div class="art">${playable(item) ? '♫' : '↗'}</div>
+  ${playable(item) ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">`}
+  <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${playable(item) ? '</button>' : '</a>'}
   <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}${location.hash.startsWith('#playlist-') ? ' from playlist' : ''}">×</button></article>`;
 const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
 function render() {
@@ -42,7 +44,6 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   view.classList.toggle('focus-player', page === 'lyrics');
-  const favorites = items.filter(item => item.liked);
   if (page === 'playlists') {
     view.innerHTML = `<h1>Playlists</h1><form id="new-playlist"><label>Name<input name="name" required maxlength="80"></label><button class="accent">Create playlist</button></form>
     <div class="tiles">${playlists.map(playlist => `<a class="tile" href="#playlist-${playlist.id}">${escape(playlist.name)}<small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>`;
@@ -75,7 +76,7 @@ function render() {
     $('#lyrics-file').onchange = importLyrics;
     renderLyrics();
   } else if (page === 'queue') {
-    view.innerHTML = '<h1>Play queue</h1>' + list(items.filter(item => item.file), 'Import audio to build your queue.');
+    view.innerHTML = '<h1>Play queue</h1>' + list(queueTracks(), 'Import audio to build your queue.');
   } else if (page === 'search') {
     view.innerHTML = '<h1>Search</h1><label>Search your library<input id="query" type="search" placeholder="Track, playlist, or service"></label><div id="results"></div>';
     const query = $('#query');
@@ -86,8 +87,8 @@ function render() {
     query.addEventListener('input', filter);
     filter();
   } else if (page === 'library' || page === 'liked') {
-    const entries = page === 'liked' ? favorites : items;
-    view.innerHTML = `<div class="library-heading"><h1>${page === 'liked' ? 'Liked music' : 'Library'}</h1><button class="accent" data-import>＋ Import</button></div>
+    const entries = items;
+    view.innerHTML = `<div class="library-heading"><h1>Library</h1><button class="accent" data-import>＋ Import</button></div>
     <div class="library-tools"><label>Filter library<input type="search" id="library-filter" placeholder="Search library"></label><button id="library-layout" aria-pressed="false">List view</button></div>
     <div id="library-results"></div>`;
     const filter = $('#library-filter');
@@ -109,10 +110,8 @@ function render() {
   } else {
     view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics">Now playing</a></div>
     <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="cover-orbit" aria-hidden="true">≋</div></section>
-    <div class="section-head"><h2>Your mixes</h2><a href="#playlists">Manage playlists ↗</a></div>
-    <div class="mix-shelf"><a class="mix-card" href="#liked"><div class="mix-art">♡</div><strong>Liked music</strong><small>${favorites.length} saved</small></a>
-    ${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art">♫</div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}
-    <a class="mix-card" href="#playlists"><div class="mix-art">＋</div><strong>Create a mix</strong><small>Your own playlist</small></a></div>
+    ${playlists.length ? `<div class="section-head"><h2>Your playlists</h2><a href="#playlists">View all ↗</a></div>
+    <div class="mix-shelf">${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art">♫</div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>` : ''}
     <h2>Recently added</h2>${list(items.slice(0, 6), 'Import audio or save a link to get started.')}`;
   }
   updatePlayer();
@@ -165,7 +164,7 @@ function highlightLyrics() {
 }
 audio.addEventListener('timeupdate', highlightLyrics);
 function updatePlayer() {
-  const available = items.some(item => item.file);
+  const available = items.some(playable);
   for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
   $('#seek').disabled = !Number.isFinite(audio.duration);
   $('#playing').textContent = selected?.title || 'Nothing playing';
@@ -181,18 +180,18 @@ function updateTime() {
   updatePlayer();
 }
 function choose(item) {
-  if (!item?.file) return;
+  if (!playable(item)) return;
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   selected = item;
-  objectUrl = URL.createObjectURL(item.file);
-  audio.src = objectUrl;
+  objectUrl = item.file ? URL.createObjectURL(item.file) : undefined;
+  audio.src = objectUrl || item.audioUrl;
   audio.play().catch(() => notice('Could not play this audio file.'));
   renderLyrics();
   updateTime();
 }
 function step(direction) {
-  const tracks = items.filter(item => item.file);
+  const tracks = queueTracks();
   if (!tracks.length) return;
   const index = tracks.findIndex(item => item.id === selected?.id);
   choose(tracks[index < 0 ? 0 : (index + direction + tracks.length) % tracks.length]);
@@ -209,7 +208,7 @@ audio.volume = Number($('#volume').value);
 $('#volume').oninput = event => { audio.volume = Number(event.target.value); };
 for (const event of ['loadedmetadata', 'timeupdate', 'play', 'pause', 'emptied']) audio.addEventListener(event, updateTime);
 audio.onended = () => {
-  const tracks = items.filter(item => item.file);
+  const tracks = queueTracks();
   const index = tracks.findIndex(item => item.id === selected?.id);
   if (index >= 0 && index + 1 < tracks.length) choose(tracks[index + 1]);
 };
@@ -252,7 +251,7 @@ view.onclick = async event => {
   const button = event.target.closest('button');
   if (!button) return;
   if (button.hasAttribute('data-import')) return dialog.showModal();
-  const { track, like, remove, seek } = button.dataset;
+  const { track, remove, seek } = button.dataset;
   if (seek !== undefined && Number.isFinite(audio.duration)) {
     audio.currentTime = Math.min(Number(seek), audio.duration);
     return;
@@ -262,16 +261,15 @@ view.onclick = async event => {
     if (savePlaylists(playlists.map(entry => entry.id === id ? {...entry, ids: entry.ids.filter(trackId => trackId !== remove)} : entry))) render();
     return;
   }
-  const item = items.find(entry => entry.id === (track || like || remove));
+  const item = items.find(entry => entry.id === (track || remove));
   if (!item) return;
-  if (track) return choose(item);
+  if (track) {
+    const id = location.hash.startsWith('#playlist-') ? location.hash.slice(10) : null;
+    if (location.hash !== '#queue') playlistQueue = playlists.find(playlist => playlist.id === id)?.ids;
+    return choose(item);
+  }
   button.disabled = true;
   try {
-    if (like) {
-      const updated = { ...item, liked: !item.liked };
-      await change('readwrite', table => table.put(updated));
-      items = items.map(entry => entry.id === item.id ? updated : entry);
-    } else {
       await change('readwrite', table => table.delete(item.id));
       items = items.filter(entry => entry.id !== item.id);
       if (selected?.id === item.id) {
@@ -281,7 +279,6 @@ view.onclick = async event => {
         URL.revokeObjectURL(objectUrl);
         objectUrl = selected = undefined;
       }
-    }
     const query = $('#query')?.value;
     const libraryFilter = $('#library-filter')?.value;
     const useList = $('#library-layout')?.getAttribute('aria-pressed') === 'true';
@@ -330,7 +327,7 @@ $('#repeat').onclick = () => {
 };
 const sequentialStep = step;
 step = function(direction) {
-  const tracks = items.filter(item => item.file && item.id !== selected?.id);
+  const tracks = queueTracks().filter(item => item.id !== selected?.id);
   if (shuffle && direction > 0 && tracks.length) choose(tracks[Math.floor(Math.random() * tracks.length)]);
   else sequentialStep(direction);
 };
@@ -340,7 +337,7 @@ audio.onended = () => {
     audio.play().catch(() => notice('Press play to continue.'));
     return;
   }
-  const tracks = items.filter(item => item.file);
+  const tracks = queueTracks();
   const index = tracks.findIndex(item => item.id === selected?.id);
   if (shuffle || repeat === 'queue' || index + 1 < tracks.length) step(1);
 };
@@ -349,7 +346,7 @@ $('#queue').onclick = () => {
   renderQueue();
 };
 function renderQueue() {
-  view.innerHTML = '<h1>Play queue</h1>' + list(items.filter(item => item.file), 'Import audio to build your queue.');
+  view.innerHTML = '<h1>Play queue</h1>' + list(queueTracks(), 'Import audio to build your queue.');
 }
 window.addEventListener('hashchange', () => { if (location.hash === '#queue') renderQueue(); });
 document.addEventListener('keydown', event => {
@@ -361,3 +358,48 @@ document.addEventListener('keydown', event => {
 window.addEventListener('beforeunload', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });
 
 $('#lyrics').onclick = () => { location.hash = 'lyrics'; };
+
+$('#playlist-file').onchange = async event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (!$('#playlist-rights').checked) return notice('Confirm permission to play the audio first.');
+  if (file.size > 1024 * 1024) return notice('Choose a playlist under 1 MB.');
+  try {
+    const lines = (await file.text()).split(/\r?\n/);
+    if (lines.some(line => /^#EXT-X-/i.test(line.trim()))) return notice('Choose an M3U track list, rather than an HLS stream.');
+    const tracks = new Map();
+    let title = '';
+    for (const line of lines) {
+      const entry = line.trim();
+      if (entry.startsWith('#EXTINF:')) {
+        title = entry.slice(entry.indexOf(',') + 1).trim();
+        continue;
+      }
+      if (!entry || entry.startsWith('#')) continue;
+      try {
+        const url = new URL(entry);
+        if (url.protocol === 'https:' && !url.username && !url.password &&
+            /\.(mp3|m4a|aac|wav|flac|ogg|opus|webm)$/i.test(url.pathname)) {
+          tracks.set(url.href, {audioUrl: url.href, title: title.slice(0, 160) || url.pathname.split('/').pop(), source: url.hostname});
+        }
+      } catch {}
+      title = '';
+    }
+    if (!tracks.size) return notice('This file has no supported direct HTTPS audio links.');
+    if (tracks.size > 500) return notice('Choose a playlist with 500 tracks or fewer.');
+    const entries = [...tracks.values()].map(track => items.find(item => item.audioUrl === track.audioUrl) ||
+      {...track, id: crypto.randomUUID(), added: Date.now()});
+    const additions = entries.filter(item => !items.includes(item));
+    await change('readwrite', table => {
+      for (const item of additions) table.put(item);
+      return table.count();
+    });
+    items.unshift(...additions);
+    const playlist = {id: crypto.randomUUID(), name: file.name.replace(/\.m3u8?$/i, ''), ids: entries.map(item => item.id)};
+    if (!savePlaylists([...playlists, playlist])) return;
+    dialog.close();
+    location.hash = 'playlist-' + playlist.id;
+    notice(`Imported ${entries.length} playable links.`);
+  } catch { notice('Could not import this playlist.'); }
+};
