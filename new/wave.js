@@ -51,7 +51,26 @@ function render() {
     query.addEventListener('input', filter);
     filter();
   } else if (page === 'library' || page === 'liked') {
-    view.innerHTML = `<h1>${page === 'liked' ? 'Liked' : 'Your library'}</h1>${list(page === 'liked' ? favorites : items, page === 'liked' ? 'Your favorites will show up here.' : 'Add an audio file or save a music link to get started.')}`;
+    const entries = page === 'liked' ? favorites : items;
+    view.innerHTML = `<div class="library-heading"><h1>${page === 'liked' ? 'Liked music' : 'Library'}</h1><button class="accent" data-import>＋ Import</button></div>
+    <div class="library-tools"><label>Filter library<input type="search" id="library-filter" placeholder="Search library"></label><button id="library-layout" aria-pressed="false">List view</button></div>
+    <div id="library-results"></div>`;
+    const filter = $('#library-filter');
+    const layout = $('#library-layout');
+    const results = $('#library-results');
+    const draw = () => {
+      const query = filter.value.trim().toLowerCase();
+      results.classList.toggle('shelf', layout.getAttribute('aria-pressed') === 'false');
+      results.innerHTML = list(entries.filter(item => (item.title + ' ' + item.source).toLowerCase().includes(query)), query ? 'No matching items.' : 'Import audio or save a music link to fill your library.');
+    };
+    filter.oninput = draw;
+    layout.onclick = () => {
+      const useList = layout.getAttribute('aria-pressed') === 'false';
+      layout.setAttribute('aria-pressed', String(useList));
+      layout.textContent = useList ? 'Grid view' : 'List view';
+      draw();
+    };
+    draw();
   } else {
     view.innerHTML = `<div class="hero"><span class="eyebrow">WAVE MUSIC</span><h1>Your music, together.</h1><p>Play your audio files and save music links from any service.</p><button class="accent" data-import>Import music</button></div>
     <h2>Speed dial</h2><div class="tiles"><a class="tile" href="#library">▤ &nbsp; Library<small>${items.length} saved</small></a><a class="tile" href="#liked">♡ &nbsp; Liked<small>${favorites.length} saved</small></a><button class="tile" data-import>＋ &nbsp; Import<small>Files or links</small></button></div>
@@ -168,7 +187,14 @@ view.onclick = async event => {
       }
     }
     const query = $('#query')?.value;
+    const libraryFilter = $('#library-filter')?.value;
+    const useList = $('#library-layout')?.getAttribute('aria-pressed') === 'true';
     render();
+    if (libraryFilter !== undefined) {
+      if (useList) $('#library-layout')?.click();
+      $('#library-filter').value = libraryFilter;
+      $('#library-filter').dispatchEvent(new Event('input'));
+    }
     if (query !== undefined) {
       $('#query').value = query;
       $('#query').dispatchEvent(new Event('input'));
@@ -187,9 +213,9 @@ let repeat = 'off';
 const controls = document.createElement('div');
 controls.className = 'extra-controls';
 controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="theme">Dark glass</button>';
-document.querySelector('main').before(controls);
-let savedTheme = 'light';
-try { savedTheme = localStorage.getItem('wave-theme') || 'light'; } catch {}
+$('footer').append(controls);
+let savedTheme = 'dark';
+try { savedTheme = localStorage.getItem('wave-theme') || 'dark'; } catch {}
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   $('#theme').textContent = theme === 'dark' ? 'Light glass' : 'Dark glass';

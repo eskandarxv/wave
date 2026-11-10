@@ -25,3 +25,53 @@ html[data-theme=dark] input:not([type=range]):not([type=file]){background:#111a2
 html[data-theme=dark] .art{background:#2b4161}
 html[data-theme=dark] #notice{background:#243249;color:#fff}
 @media(max-width:640px){footer{inset:auto 6px calc(6px + env(safe-area-inset-bottom));border-radius:18px}.extra-controls{right:8px;left:62px;justify-content:space-between}.extra-controls button{font-size:11px;padding:8px}main{padding-top:70px}}
+
+body {grid-template-columns: 68px minmax(0, 1fr)}
+html[data-theme=dark] body {
+  background: radial-gradient(ellipse at 43% -16%, #55566b 0%, #23243f 34%, transparent 65%), #10101d;
+}
+aside {
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 0 6px;
+  padding: 10px 4px;
+  height: calc(100dvh - 114px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+aside .logo {padding: 0}
+aside span, aside > small {position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden}
+aside nav a {font-size: 23px; text-align: center; padding: 7px 10px}
+aside #import {margin-top: auto}
+main {padding: 25px clamp(14px, 3vw, 42px) 140px}
+main h1 {font-size: clamp(28px, 4vw, 40px); letter-spacing: -.04em}
+.hero {padding: clamp(22px, 4vw, 42px)}
+.library-heading, .library-tools {display: flex; align-items: center; justify-content: space-between; gap: 12px}
+.library-tools {justify-content: flex-start; align-items: end; margin-bottom: 20px}
+.library-tools label {flex: 0 1 320px; margin: 0; font-size: 12px}
+.shelf {display: grid; grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); gap: 16px}
+.shelf .empty {grid-column: 1 / -1}
+.shelf .row {display: grid; grid-template-columns: 1fr auto auto; margin: 0; gap: 6px; align-content: start}
+.shelf .art {
+  grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 1;
+  font-size: clamp(34px, 7vw, 70px);
+  background: radial-gradient(at 85% 20%, #677ca2, transparent 65%), linear-gradient(145deg, #26294f, #454b76);
+  color: #f4f3ff;
+}
+.shelf .item {padding: 6px}
+footer {
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 320px) minmax(52px, .35fr) auto;
+  inset: auto 10px 10px 74px;
+  gap: 10px; height: auto; min-height: 74px;
+  padding: 8px 12px; border-radius: 14px;
+}
+.extra-controls {position: static; padding: 0; border: 0; background: none !important; flex-wrap: wrap}
+.extra-controls button {font-size: 12px; padding: 6px 8px}
+@media (max-width: 800px) {
+  body {grid-template-columns: 54px minmax(0, 1fr)}
+  aside {height: calc(100dvh - 140px)}
+  footer {inset: auto 6px calc(6px + env(safe-area-inset-bottom)) 6px; grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr)}
+  #volume {display: none}
+  .extra-controls {grid-column: 1 / -1; justify-content: center}
+  .shelf {grid-template-columns: repeat(auto-fill, minmax(128px, 1fr))}
+}
