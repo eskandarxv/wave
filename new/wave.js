@@ -40,8 +40,16 @@ function notice(message) {
   noticeTimer = setTimeout(() => { status.textContent = ''; }, 4500);
 }
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function spotifyEmbed(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname !== 'open.spotify.com' || url.username || url.password) return null;
+    const match = url.pathname.match(/^\/(?:intl-[a-z-]+\/)?(?:embed\/)?(playlist|album|track|episode|show|artist)\/([A-Za-z0-9]+)\/?$/);
+    return match ? 'https://open.spotify.com/embed/' + match[1] + '/' + match[2] + '?theme=0' : null;
+  } catch { return null; }
+}
 const row = item => `<article class="row"><div class="art">${playable(item) ? '♫' : '↗'}</div>
-  ${playable(item) ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">`}
+  ${playable(item) ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${spotifyEmbed(item.url) ? '#listen-' + item.id : escape(item.url)}" ${spotifyEmbed(item.url) ? '' : 'target="_blank" rel="noopener noreferrer"'}>`}
   <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${playable(item) ? '</button>' : '</a>'}
   <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}${location.hash.startsWith('#playlist-') ? ' from playlist' : ''}">×</button></article>`;
 const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
@@ -53,7 +61,15 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   view.classList.toggle('focus-player', page === 'lyrics');
-  if (page === 'settings') {
+  if (page.startsWith('listen-')) {
+    const item = items.find(entry => entry.id === page.slice(7));
+    const embed = spotifyEmbed(item?.url);
+    if (!embed) { location.hash = 'library'; return; }
+    audio.pause();
+    view.innerHTML = `<a href="#library">‹ Library</a><h1>${escape(item.title)}</h1>
+      <section class="service-player"><iframe title="Spotify player" src="${embed}" width="100%" height="480" style="border:0;border-radius:12px" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+      <p>Play here with Spotify. Available playback depends on Spotify and your account; some tracks may be previews.</p></section>`;
+  } else if (page === 'settings') {
     view.innerHTML = '<h1>Settings</h1><div class="tiles"><a class="tile" href="#library">Library<small>Browse audio and saved links</small></a><button class="tile" id="settings-theme">Switch theme</button></div>';
     $('#settings-theme').onclick = () => $('#theme').click();
   } else if (page === 'playlists') {
