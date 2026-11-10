@@ -48,8 +48,26 @@ function spotifyEmbed(value) {
     return match ? 'https://open.spotify.com/embed/' + match[1] + '/' + match[2] + '?theme=0' : null;
   } catch { return null; }
 }
+function serviceEmbed(value) {
+  const spotify = spotifyEmbed(value);
+  if (spotify) return {url: spotify, name: 'Spotify', note: 'Spotify controls playback availability. Some tracks may be previews.'};
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    if (!['youtube.com', 'www.youtube.com', 'music.youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) return null;
+    const video = url.hostname === 'youtu.be' ? url.pathname.slice(1) :
+      url.pathname === '/watch' ? url.searchParams.get('v') :
+      url.pathname.match(/^\/(?:shorts|embed)\/([A-Za-z0-9_-]{11})\/?$/)?.[1];
+    const playlist = url.searchParams.get('list');
+    let path;
+    if (video && /^[A-Za-z0-9_-]{11}$/.test(video)) path = video + '?playsinline=1';
+    else if (playlist && /^[A-Za-z0-9_-]{10,150}$/.test(playlist)) path = 'videoseries?list=' + playlist + '&playsinline=1';
+    else return null;
+    return {url: 'https://www.youtube.com/embed/' + path, name: 'YouTube', note: 'Full video playback where YouTube allows embedding. Private, restricted, or unavailable videos may not play.'};
+  } catch { return null; }
+}
 const row = item => `<article class="row"><div class="art">${playable(item) ? '♫' : '↗'}</div>
-  ${playable(item) ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${spotifyEmbed(item.url) ? '#listen-' + item.id : escape(item.url)}" ${spotifyEmbed(item.url) ? '' : 'target="_blank" rel="noopener noreferrer"'}>`}
+  ${playable(item) ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${serviceEmbed(item.url) ? '#listen-' + item.id : escape(item.url)}" ${serviceEmbed(item.url) ? '' : 'target="_blank" rel="noopener noreferrer"'}>`}
   <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${playable(item) ? '</button>' : '</a>'}
   <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}${location.hash.startsWith('#playlist-') ? ' from playlist' : ''}">×</button></article>`;
 const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
@@ -63,12 +81,12 @@ function render() {
   view.classList.toggle('focus-player', page === 'lyrics');
   if (page.startsWith('listen-')) {
     const item = items.find(entry => entry.id === page.slice(7));
-    const embed = spotifyEmbed(item?.url);
+    const embed = serviceEmbed(item?.url);
     if (!embed) { location.hash = 'library'; return; }
     audio.pause();
     view.innerHTML = `<a href="#library">‹ Library</a><h1>${escape(item.title)}</h1>
-      <section class="service-player"><iframe title="Spotify player" src="${embed}" width="100%" height="480" style="border:0;border-radius:12px" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
-      <p>Play here with Spotify. Available playback depends on Spotify and your account; some tracks may be previews.</p></section>`;
+      <section class="service-player"><iframe title="${embed.name} player" src="${escape(embed.url)}" referrerpolicy="strict-origin-when-cross-origin" width="100%" height="480" style="border:0;border-radius:12px" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+      <p>${embed.note}</p></section>`;
   } else if (page === 'settings') {
     view.innerHTML = '<h1>Settings</h1><div class="tiles"><a class="tile" href="#library">Library<small>Browse audio and saved links</small></a><button class="tile" id="settings-theme">Switch theme</button></div>';
     $('#settings-theme').onclick = () => $('#theme').click();
@@ -197,7 +215,7 @@ function highlightLyrics() {
 }
 audio.addEventListener('timeupdate', highlightLyrics);
 function updatePlayer() {
-  $('footer').hidden = !selected;
+  $('footer').hidden = !selected || location.hash.startsWith('#listen-');
   document.body.classList.toggle('has-track', Boolean(selected));
   const available = Boolean(selected) || queueTracks().length > 0;
   for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
