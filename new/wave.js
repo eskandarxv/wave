@@ -5,6 +5,9 @@ let items = [];
 let selected;
 let objectUrl;
 let noticeTimer;
+let playlists = [];
+try { playlists = JSON.parse(localStorage.getItem('wave-playlists') || '[]'); } catch {}
+
 const database = new Promise((resolve, reject) => {
   const request = indexedDB.open('wave-fresh-library', 1);
   request.onupgradeneeded = () => request.result.createObjectStore('items', { keyPath: 'id' });
@@ -30,7 +33,7 @@ const row = item => `<article class="row"><div class="art">${item.file ? '♫' :
   ${item.file ? `<button class="item" data-track="${item.id}">` : `<a class="item" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">`}
   <strong>${escape(item.title)}</strong><small>${escape(item.source)}</small>${item.file ? '</button>' : '</a>'}
   <button data-like="${item.id}" aria-label="Favorite ${escape(item.title)}" aria-pressed="${Boolean(item.liked)}">${item.liked ? '♥' : '♡'}</button>
-  <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}">×</button></article>`;
+  <button data-remove="${item.id}" aria-label="Remove ${escape(item.title)}${location.hash.startsWith('#playlist-') ? ' from playlist' : ''}">×</button></article>`;
 const list = (entries, fallback) => entries.map(row).join('') || `<div class="empty">${fallback}</div>`;
 function render() {
   const page = location.hash.slice(1) || 'home';
@@ -39,7 +42,36 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   const favorites = items.filter(item => item.liked);
-  if (page === 'queue') {
+  if (page === 'playlists') {
+    view.innerHTML = `<h1>Playlists</h1><form id="new-playlist"><label>Name<input name="name" required maxlength="80"></label><button class="accent">Create playlist</button></form>
+    <div class="tiles">${playlists.map(playlist => `<a class="tile" href="#playlist-${playlist.id}">${escape(playlist.name)}<small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}</div>`;
+    $('#new-playlist').onsubmit = event => {
+      event.preventDefault();
+      const name = event.target.elements.name.value.trim();
+      if (!name) return;
+      const playlist = { id: crypto.randomUUID(), name, ids: [] };
+      if (savePlaylists([...playlists, playlist])) location.hash = 'playlist-' + playlist.id;
+    };
+  } else if (page.startsWith('playlist-')) {
+    const playlist = playlists.find(entry => entry.id === page.slice(9));
+    if (!playlist) { location.hash = 'playlists'; return; }
+    const entries = playlist.ids.map(id => items.find(item => item.id === id)).filter(Boolean);
+    view.innerHTML = `<a href="#playlists">‹ Playlists</a><h1>${escape(playlist.name)}</h1>
+    <form id="playlist-add"><label>Add music<select name="track" required><option value="">Choose from library</option>${items.filter(item => !playlist.ids.includes(item.id)).map(item => `<option value="${item.id}">${escape(item.title)}</option>`).join('')}</select></label><button class="accent">Add item</button></form>
+    <button id="playlist-delete">Delete playlist</button><section>${list(entries, 'Add items from your library.')}</section>`;
+    $('#playlist-add').onsubmit = event => {
+      event.preventDefault();
+      const id = event.target.elements.track.value;
+      if (savePlaylists(playlists.map(entry => entry === playlist ? {...entry, ids: [...entry.ids, id]} : entry))) render();
+    };
+    $('#playlist-delete').onclick = () => {
+      if (confirm('Delete this playlist?') && savePlaylists(playlists.filter(entry => entry !== playlist))) location.hash = 'playlists';
+    };
+  } else if (page === 'lyrics') {
+    view.innerHTML = '<h1>Synced lyrics</h1><p id="lyrics-track"></p><label>Choose an LRC lyrics file<input type="file" accept=".lrc,text/plain" id="lyrics-file"></label><div id="lyrics-lines"></div>';
+    $('#lyrics-file').onchange = importLyrics;
+    renderLyrics();
+  } else if (page === 'queue') {
     view.innerHTML = '<h1>Play queue</h1>' + list(items.filter(item => item.file), 'Import audio to build your queue.');
   } else if (page === 'search') {
     view.innerHTML = '<h1>Search</h1><label>Search your library<input id="query" type="search" placeholder="Track, playlist, or service"></label><div id="results"></div>';
@@ -78,6 +110,53 @@ function render() {
   }
   updatePlayer();
 }
+function savePlaylists(next) {
+  try {
+    localStorage.setItem('wave-playlists', JSON.stringify(next));
+    playlists = next;
+    return true;
+  } catch { notice('Could not save playlists on this device.'); return false; }
+}
+async function importLyrics(event) {
+  const track = selected;
+  const file = event.target.files[0];
+  if (!track || !file) return notice('Select an audio track first.');
+  if (file.size > 512000) return notice('Choose an LRC file smaller than 500 KB.');
+  try {
+    const lyrics = (await file.text()).split(/\r?\n/).flatMap(line => {
+      const stamps = [...line.matchAll(/\[(\d+):(\d+(?:[.:]\d+)?)\]/g)];
+      const text = line.replace(/\[\d+:\d+(?:[.:]\d+)?\]/g, '').trim();
+      return text ? stamps.map(([, minutes, seconds]) => ({ at: Number(minutes) * 60 + Number(seconds.replace(':', '.')), text })) : [];
+    }).sort((a, b) => a.at - b.at);
+    if (!lyrics.length) return notice('No timestamped lyrics found.');
+    if (!items.includes(track)) return;
+    const updated = {...track, lyrics};
+    await change('readwrite', table => table.put(updated));
+    items = items.map(item => item.id === track.id ? updated : item);
+    if (selected?.id === track.id) selected = updated;
+    renderLyrics();
+  } catch { notice('Could not save lyrics.'); }
+}
+function renderLyrics() {
+  const lines = $('#lyrics-lines');
+  if (!lines) return;
+  $('#lyrics-track').textContent = selected?.title || 'Select an audio track to attach lyrics.';
+  $('#lyrics-file').disabled = !selected;
+  lines.innerHTML = selected?.lyrics?.map(({at,text}) => `<button data-seek="${at}">${escape(text)}</button>`).join('') || '<p>Import an LRC file you have permission to use.</p>';
+  highlightLyrics();
+}
+function highlightLyrics() {
+  const lines = $('#lyrics-lines');
+  if (!lines) return;
+  const buttons = [...lines.querySelectorAll('button')];
+  const active = buttons.findLast(button => Number(button.dataset.seek) <= audio.currentTime);
+  const previous = lines.querySelector('[aria-current]');
+  if (previous === active) return;
+  previous?.removeAttribute('aria-current');
+  active?.setAttribute('aria-current', 'true');
+  if (audio.played.length) active?.scrollIntoView({block:'nearest'});
+}
+audio.addEventListener('timeupdate', highlightLyrics);
 function updatePlayer() {
   const available = items.some(item => item.file);
   for (const button of ['#prev', '#next', '#play']) $(button).disabled = !available;
@@ -102,6 +181,7 @@ function choose(item) {
   objectUrl = URL.createObjectURL(item.file);
   audio.src = objectUrl;
   audio.play().catch(() => notice('Could not play this audio file.'));
+  renderLyrics();
   updateTime();
 }
 function step(direction) {
@@ -165,7 +245,16 @@ view.onclick = async event => {
   const button = event.target.closest('button');
   if (!button) return;
   if (button.hasAttribute('data-import')) return dialog.showModal();
-  const { track, like, remove } = button.dataset;
+  const { track, like, remove, seek } = button.dataset;
+  if (seek !== undefined && Number.isFinite(audio.duration)) {
+    audio.currentTime = Math.min(Number(seek), audio.duration);
+    return;
+  }
+  if (remove && location.hash.startsWith('#playlist-')) {
+    const id = location.hash.slice(10);
+    if (savePlaylists(playlists.map(entry => entry.id === id ? {...entry, ids: entry.ids.filter(trackId => trackId !== remove)} : entry))) render();
+    return;
+  }
   const item = items.find(entry => entry.id === (track || like || remove));
   if (!item) return;
   if (track) return choose(item);
@@ -212,7 +301,7 @@ let shuffle = false;
 let repeat = 'off';
 const controls = document.createElement('div');
 controls.className = 'extra-controls';
-controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="theme">Dark glass</button>';
+controls.innerHTML = '<button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat">Repeat off</button><button id="queue">Queue</button><button id="lyrics">Lyrics</button><button id="theme">Dark glass</button>';
 $('footer').append(controls);
 let savedTheme = 'dark';
 try { savedTheme = localStorage.getItem('wave-theme') || 'dark'; } catch {}
@@ -263,3 +352,5 @@ document.addEventListener('keydown', event => {
   if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
 });
 window.addEventListener('beforeunload', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });
+
+$('#lyrics').onclick = () => { location.hash = 'lyrics'; };

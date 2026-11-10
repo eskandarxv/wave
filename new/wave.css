@@ -75,3 +75,9 @@ footer {
   .extra-controls {grid-column: 1 / -1; justify-content: center}
   .shelf {grid-template-columns: repeat(auto-fill, minmax(128px, 1fr))}
 }
+
+#new-playlist, #playlist-add {max-width: 420px; margin-bottom: 20px}
+#playlist-add select {display: block; width: 100%; padding: 10px; margin-top: 6px; border-radius: 8px; font: inherit}
+#lyrics-lines {display: grid; gap: 6px; max-width: 720px}
+#lyrics-lines button {text-align: left; color: var(--muted); font-size: clamp(18px, 3vw, 30px)}
+#lyrics-lines button[aria-current] {color: var(--ink); background: #6e89c34d}
