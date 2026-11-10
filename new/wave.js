@@ -41,6 +41,7 @@ function render() {
     if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
+  view.classList.toggle('focus-player', page === 'lyrics');
   const favorites = items.filter(item => item.liked);
   if (page === 'playlists') {
     view.innerHTML = `<h1>Playlists</h1><form id="new-playlist"><label>Name<input name="name" required maxlength="80"></label><button class="accent">Create playlist</button></form>
@@ -68,7 +69,9 @@ function render() {
       if (confirm('Delete this playlist?') && savePlaylists(playlists.filter(entry => entry !== playlist))) location.hash = 'playlists';
     };
   } else if (page === 'lyrics') {
-    view.innerHTML = '<h1>Synced lyrics</h1><p id="lyrics-track"></p><label>Choose an LRC lyrics file<input type="file" accept=".lrc,text/plain" id="lyrics-file"></label><div id="lyrics-lines"></div>';
+    view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics" aria-current="page">Now playing</a></div>
+    <div class="focus-grid"><div class="focus-art"><div class="cover-orbit" aria-hidden="true">≋</div><p id="lyrics-track"></p></div>
+    <section class="focus-lyrics"><h1>Lyrics</h1><div id="lyrics-lines"></div><label>Attach synced lyrics<input type="file" accept=".lrc,text/plain" id="lyrics-file"></label></section></div>`;
     $('#lyrics-file').onchange = importLyrics;
     renderLyrics();
   } else if (page === 'queue') {
@@ -104,9 +107,13 @@ function render() {
     };
     draw();
   } else {
-    view.innerHTML = `<div class="hero"><span class="eyebrow">WAVE MUSIC</span><h1>Your music, together.</h1><p>Play your audio files and save music links from any service.</p><button class="accent" data-import>Import music</button></div>
-    <h2>Speed dial</h2><div class="tiles"><a class="tile" href="#library">▤ &nbsp; Library<small>${items.length} saved</small></a><a class="tile" href="#liked">♡ &nbsp; Liked<small>${favorites.length} saved</small></a><button class="tile" data-import>＋ &nbsp; Import<small>Files or links</small></button></div>
-    <h2>Recently added</h2>${list(items.slice(0, 6), 'Your library starts here.')}`;
+    view.innerHTML = `<div class="view-switch"><a href="#library">Library</a><a href="#lyrics">Now playing</a></div>
+    <section class="studio-hero"><div><span class="eyebrow">PERSONAL MUSIC STUDIO</span><h1>Your collection</h1><p>Keep your audio, playlists and music links together on this device.</p><button class="accent" data-import>＋ Import music</button></div><div class="cover-orbit" aria-hidden="true">≋</div></section>
+    <div class="section-head"><h2>Your mixes</h2><a href="#playlists">Manage playlists ↗</a></div>
+    <div class="mix-shelf"><a class="mix-card" href="#liked"><div class="mix-art">♡</div><strong>Liked music</strong><small>${favorites.length} saved</small></a>
+    ${playlists.map(playlist => `<a class="mix-card" href="#playlist-${playlist.id}"><div class="mix-art">♫</div><strong>${escape(playlist.name)}</strong><small>${playlist.ids.filter(id => items.some(item => item.id === id)).length} items</small></a>`).join('')}
+    <a class="mix-card" href="#playlists"><div class="mix-art">＋</div><strong>Create a mix</strong><small>Your own playlist</small></a></div>
+    <h2>Recently added</h2>${list(items.slice(0, 6), 'Import audio or save a link to get started.')}`;
   }
   updatePlayer();
 }

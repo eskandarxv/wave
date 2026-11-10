@@ -81,3 +81,54 @@ footer {
 #lyrics-lines {display: grid; gap: 6px; max-width: 720px}
 #lyrics-lines button {text-align: left; color: var(--muted); font-size: clamp(18px, 3vw, 30px)}
 #lyrics-lines button[aria-current] {color: var(--ink); background: #6e89c34d}
+
+html[data-theme=dark] {
+  --bg: #111516; --panel: #1b2122; --ink: #f5eee0;
+  --muted: #aebbb7; --accent: #a3dfd2; --line: #bdede419;
+}
+html[data-theme=dark] body {
+  background: radial-gradient(ellipse at 66% -20%, #263d3b, transparent 63%), #111516;
+}
+html[data-theme=dark] aside, html[data-theme=dark] footer, html[data-theme=dark] dialog {
+  background: #171d1eeb;
+}
+html[data-theme=dark] .accent, html[data-theme=dark] #play {
+  background: #a3dfd2; color: #142624;
+}
+.view-switch {display:inline-flex; gap:3px; padding:4px; border:1px solid var(--line); border-radius:10px; background:var(--panel); margin-bottom:18px}
+.view-switch a {padding:7px 12px; border-radius:6px; font-size:13px}
+.view-switch a[aria-current] {background:#679e9340}
+.studio-hero {
+  display:grid; grid-template-columns:1fr minmax(100px, 24%); align-items:center;
+  gap:22px; padding:clamp(18px, 4vw, 44px); margin-bottom:28px;
+  border:1px solid var(--line); border-radius:16px;
+  background:linear-gradient(120deg, #88bdb52d, #bd92682e);
+}
+.studio-hero p {max-width:34rem}
+.cover-orbit, .mix-art {
+  display:grid; place-items:center; aspect-ratio:1; border-radius:12px; color:#fcf7e8;
+  background:radial-gradient(ellipse at 73% 25%, #b38765 0%, transparent 42%), repeating-radial-gradient(ellipse at 20% 100%, #213f40 0 11px, #527a73 12px 14px, #2e5856 15px 26px);
+}
+.cover-orbit {font-size:clamp(34px, 7vw, 86px); box-shadow:0 16px 32px #0004}
+.section-head {display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.section-head a {font-size:13px; color:var(--muted)}
+.mix-shelf {display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,170px)); gap:16px; margin-bottom:26px}
+.mix-card {display:block; min-width:0; border-radius:12px; overflow:hidden}
+.mix-card strong, .mix-card small {display:block; overflow-wrap:anywhere; padding:5px 5px 0}
+.mix-art {font-size:42px}
+.mix-card:nth-child(3n+2) .mix-art {background:linear-gradient(140deg,#73492e,#bd9368)}
+.mix-card:nth-child(3n) .mix-art {background:linear-gradient(140deg,#304459,#648890)}
+.focus-grid {display:grid;grid-template-columns:minmax(160px, .85fr) minmax(0, 1.15fr); align-items:center;gap:clamp(20px,6vw,90px);min-height:60vh}
+.focus-player {background:radial-gradient(ellipse at 33% 43%,#659e9a40,transparent 58%),radial-gradient(ellipse at 85% 55%,#be8c6150,transparent 55%)}
+.focus-art {max-width:420px; text-align:center}
+.focus-art p {overflow-wrap:anywhere;color:var(--ink);font-weight:700}
+.focus-lyrics {min-width:0}
+.focus-lyrics input {max-width:100%}
+#lyrics-lines {max-height:48vh;overflow:auto}
+@media(max-width:640px) {
+  .studio-hero {grid-template-columns:1fr}
+  .studio-hero .cover-orbit {display:none}
+  .focus-grid {grid-template-columns:1fr}
+  .focus-art {width:min(52vw,220px);margin-inline:auto}
+  .mix-shelf {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
